@@ -1,0 +1,123 @@
+name: PesMotion Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 (pesmotion.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (CMake)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Tests (ctest)
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Selftest
+        run: .\build\Release\pesmotion.exe selftest
+
+      - name: Package artifact
+        shell: pwsh
+        run: Copy-Item build\Release\pesmotion.exe pesmotion-windows-x64.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pesmotion-windows-x64
+          path: pesmotion-windows-x64.exe
+          retention-days: 30
+
+  linux:
+    name: Linux x64 (pesmotion)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (CMake)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Tests (ctest)
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Selftest
+        run: ./build/pesmotion selftest
+
+      - name: Package artifact
+        run: cp build/pesmotion pesmotion-linux-x64 && chmod +x pesmotion-linux-x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pesmotion-linux-x64
+          path: pesmotion-linux-x64
+          retention-days: 30
+
+  dataset:
+    name: Open mocap datasets (download in CI)
+    runs-on: ubuntu-latest
+    # Nunca bloqueia o build principal: fontes de dataset são opcionais e
+    # dependem de licença/URL direta verificada (ver datasets/manifest.json).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate manifest + fetch enabled sources
+        run: python pipeline/download_datasets.py --manifest datasets/manifest.json --out datasets_out --report datasets_out/report.json
+
+      - name: Build engine and validate any BVH found
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j
+          python pipeline/validate_downloads.py --dir datasets_out --bin ./build/pesmotion --report datasets_out/validation.json
+
+      - name: Upload dataset report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pesmotion-dataset-report
+          path: datasets_out
+          retention-days: 14
+
+  release:
+    name: Publish release (tag v*)
+    needs: [windows, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble dist/
+        run: |
+          mkdir -p dist
+          cp artifacts/pesmotion-windows-x64/pesmotion-windows-x64.exe "dist/pesmotion-${GITHUB_REF_NAME}-windows-x64.exe"
+          cp artifacts/pesmotion-linux-x64/pesmotion-linux-x64 "dist/pesmotion-${GITHUB_REF_NAME}-linux-x64"
+          chmod +x "dist/pesmotion-${GITHUB_REF_NAME}-linux-x64"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PESMotion ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/*

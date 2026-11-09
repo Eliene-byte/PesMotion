@@ -1,0 +1,51 @@
+{
+  "$schema": "pesmotion-datasets-manifest/v1",
+  "comment": "Fontes de captura ABERTAS. Nada e baixado localmente: o job 'dataset' do GitHub Actions e quem executa isto. Habilite uma fonte SOMENTE depois de verificar a licenca e preencher 'url' direta (link direto de arquivo, nao pagina de download). Fontes com enabled=false sao ignoradas silenciosamente.",
+  "policy": {
+    "max_bytes_per_source": 2147483648,
+    "skip_on_error": true,
+    "user_agent": "PESMotion-CI/0.1"
+  },
+  "sources": [
+    {
+      "id": "cmu-mocap",
+      "name": "CMU Graphics Lab Motion Capture Database",
+      "homepage": "https://mocap.cs.cmu.edu/",
+      "license": "Livre para uso em pesquisa/arte; exige citacao CMU. Verifique termos antes de redistribuir qualquer conversao.",
+      "format": "c3d (original) / BVH (conversoes de terceiros)",
+      "enabled": false,
+      "url": null,
+      "notes": "Candidata forte para locomocao, corrida, chutes basicos. Habilitar com uma URL direta de arquivo .bvh ou .zip apos decidir a origem da conversao."
+    },
+    {
+      "id": "sfu-mocap",
+      "name": "SFU Motion Capture Database (Sommer et al.)",
+      "homepage": "http://mocap.cs.sfu.ca/",
+      "license": "Livre para pesquisa; cite 'Sommer et al.' Verifique termos na pagina.",
+      "format": "c3d/bvh",
+      "enabled": false,
+      "url": null,
+      "notes": "Boa cobertura de gestos genericos. Habilitar com URL direta apos verificar termos e links vigentes."
+    },
+    {
+      "id": "amass",
+      "name": "AMASS (Archive of Motion Capture as Surface Shapes)",
+      "homepage": "https://amass.is.tue.mpg.de/",
+      "license": "Registro e uso nao-comercial de pesquisa. NAO redistribuir dados ou derivados no repo.",
+      "format": "npz (SMPL-H/SMPL-X)",
+      "enabled": false,
+      "url": null,
+      "notes": "Requer conta. Se usado, a conversao para BVH acontece no CI com credencial propria; nunca commitar dados."
+    },
+    {
+      "id": "captura-propria",
+      "name": "Captura propria do time PesMotion",
+      "homepage": "https://github.com/Eliene-byte/PesMotion",
+      "license": "A definir pelo time (sugestao: CC-BY-4.0 para dados)",
+      "format": "BVH",
+      "enabled": false,
+      "url": null,
+      "notes": "Fonte preferida para as jogadas-chave (chute, corte, carrinho, goleiro). Envie os .bvh por PR em datasets/raw/ (via LFS) quando houver material."
+    }
+  ]
+}
